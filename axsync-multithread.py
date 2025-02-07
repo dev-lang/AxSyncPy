@@ -8,7 +8,10 @@ import argparse
 
 # Función para descargar una parte de un archivo
 def download_chunk(url, start, end, file_name, part_number):
-    headers = {'Range': f'bytes={start}-{end}'}
+    headers = {
+        'Range': f'bytes={start}-{end}',
+        'Accept-Encoding': 'identity'  # Evitar compresión gzip
+    }
     response = requests.get(url, headers=headers, stream=True)
     response.raise_for_status()
     
@@ -31,7 +34,8 @@ def combine_parts(file_name, parts):
 # Función principal para descargar un archivo en paralelo
 def download_file(url, file_name, num_threads=8):
     # Obtener el tamaño total del archivo
-    response = requests.head(url)
+    headers = {'Accept-Encoding': 'identity'}  # Evitar compresión gzip
+    response = requests.head(url, headers=headers)
     total_size = int(response.headers.get('content-length', 0))
     
     # Calcular el tamaño de cada parte
@@ -60,7 +64,8 @@ def download_file(url, file_name, num_threads=8):
 # Función para descargar todos los archivos de una carpeta FTP
 def download_directory(base_url, destination_folder, num_threads=8):
     # Obtener el contenido de la página
-    response = requests.get(base_url)
+    headers = {'Accept-Encoding': 'identity'}  # Evitar compresión gzip
+    response = requests.get(base_url, headers=headers)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # Crear la carpeta de destino si no existe
