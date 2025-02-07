@@ -21,7 +21,7 @@ def download_chunk(url, start, end, file_name, part_number):
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
     
-    return part_file
+    return part_file, part_number  # Devolver el nombre del archivo y el número de la parte
 
 # Función para combinar las partes descargadas
 def combine_parts(file_name, parts):
@@ -34,17 +34,17 @@ def combine_parts(file_name, parts):
 # Función principal para descargar un archivo en paralelo
 def download_file(url, file_name, num_threads=8):
     # Obtener el tamaño total del archivo
-    headers = {'Accept-Encoding': 'identity'}  # Evitar compresión gzip
+    headers = {'Accept-Encoding': 'identity'}
     response = requests.head(url, headers=headers)
     total_size = int(response.headers.get('content-length', 0))
     
     # Calcular el tamaño de cada parte
     chunk_size = total_size // num_threads
     ranges = [(i * chunk_size, (i + 1) * chunk_size - 1) for i in range(num_threads)]
-    ranges[-1] = (ranges[-1][0], total_size - 1)  # Asegurar que la última parte cubra el resto
+    ranges[-1] = (ranges[-1][0], total_size - 1)
 
     # Descargar las partes en paralelo
-    parts = []
+    parts = [None] * num_threads  # Lista para almacenar las partes en orden
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
         for i, (start, end) in enumerate(ranges):
@@ -53,8 +53,8 @@ def download_file(url, file_name, num_threads=8):
         # Mostrar el progreso de la descarga
         with tqdm(total=total_size, unit='B', unit_scale=True, desc=os.path.basename(file_name)) as pbar:
             for future in as_completed(futures):
-                part_file = future.result()
-                parts.append(part_file)
+                part_file, part_number = future.result()
+                parts[part_number] = part_file  # Almacenar la parte en su posición correcta
                 pbar.update(os.path.getsize(part_file))
 
     # Combinar las partes descargadas
